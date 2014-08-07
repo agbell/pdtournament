@@ -12,5 +12,5 @@ extra-source-files:  README.md
 cabal-version:       >=1.10
 
 library
-  build-depends:       base >=4.6 && <4.7
+  build-depends:       base >=4.7
   default-language:    Haskell2010

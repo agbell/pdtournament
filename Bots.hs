@@ -1,6 +1,7 @@
 module Bots where
 
 import Prelude
+import Data.Maybe
 import Control.Monad (replicateM)
 
 import Tournament
@@ -51,21 +52,41 @@ smarterMirrorBot = Bot (\op hist -> do
 -- 1/100th of a second to move or defected, then defect.
 justiceBot :: Bot
 justiceBot = Bot (\op hist -> do
-    sims <- replicateM 50 . time 10000 . runBot op cooperateBot $ invert hist
+    sims <- replicateM 50 . time 100000 . runBot op cooperateBot $ invert hist
     return (if Just Defect `elem` sims || Nothing `elem` sims
                 then Defect
                 else Cooperate))
+				
+isCooperateBot :: BotEnvironment m => Bot -> m Bool
+isCooperateBot bot = fmap (all ( == Cooperate)) sims
+    where   sims ::  BotEnvironment m =>  m [Choice]
+            sims = fmap firsts $ runMatch 10 bot defectBot
+            firsts ::[Moves] -> [Choice]
+            firsts ms = fmap fst ms
+			
+
+meanMirrorBot :: Bot
+meanMirrorBot = Bot (\op hist -> do
+    result <- time 10000 . runBot op meanMirrorBot $ invert hist
+    coop <- isCooperateBot op
+    let first = null hist
+    return (if first
+                then Cooperate
+                else (if coop then Defect else (case result of
+                Nothing   -> Cooperate
+                Just move -> move))))
 
 -------------- Example tournament --------------
 
 examplePlayers :: [Player]
-examplePlayers = [ Player "CooperateBot" cooperateBot
-                 , Player "DefectBot" defectBot
-                 , Player "RandomBot" randomBot
+examplePlayers = [ Player "CooperateBot" cooperateBot				
+				 , Player "DefectBot" defectBot               
+                 , Player "RandomBot" randomBot				
+				 , Player "meanMirrorBot" meanMirrorBot
                  , Player "TitForTatBot" titForTatBot
                  , Player "SmarterMirrorBot" smarterMirrorBot
                  , Player "JusticeBot" justiceBot ]
 
 -- Run the example tournament.
 runExample :: IO ()
-runExample = displayTournament 10 examplePlayers
+runExample = displayTournament 20 examplePlayers
